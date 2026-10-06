@@ -228,7 +228,7 @@ int swapNibblePairs(int x) {
     int leftmask = (0x0F << 24) | (0x0F << 16) | (0x0F << 8) | 0x0F; 	
     int rightmask = leftmask << 4;
     int x_right = rightmask & x;
-    int x_right_shift = (~((1 << 31) >> 4)) & (x_right >> 4);
+    int x_right_shift = (~((1 << 31) >> 3)) & (x_right >> 4);
     int x_left_shift = (leftmask & x) << 4;
     int result = x_right_shift | x_left_shift;
     return result;
@@ -315,7 +315,7 @@ int rotateRightBits(int x, int n) {
     int rightpart = mask1 & x;
     int lsmask = ~(((1<<31)>>n)<<1);
     int rightshifted = lsmask & (rightpart >> n);
-    int leftpartshifted = (mask2 & x) << ((31^n) + 1);
+    int leftpartshifted = (mask2 & x) << ((31 ^ n) + 1);
     return rightshifted | leftpartshifted;
 }
 
@@ -331,7 +331,14 @@ int rotateRightBits(int x, int n) {
  *   Rating: 5
  */
 int roundEvenPow2(int x, int n) {
-    
+    int mask1 = (1 << n) + ~0;
+    int low_part = mask1 & x;
+    int bias = (1 << (n + ~0)) + ~0; 
+    int mask2 = 1 << n; 
+    int added_low_part = low_part + ((mask2 & x) >> n) + bias;
+    int increment = added_low_part & mask2; //增量
+    int ans = (x & (~mask1)) + increment;
+    return ans;    
 }
 
 // P11
@@ -347,7 +354,16 @@ int roundEvenPow2(int x, int n) {
  *   Rating: 5
  */
 int midpointTowardFirst(int x, int y) {
-  return 11;
+     int y_end = (y >> 31) & 1;
+     int x_end = (x >> 31) & 1;	 	 
+     int gap = y + ~x + 1; 	
+     int bias = ((((gap) >> 31) & 1) | (y_end & ~x_end)) & (~((~y_end) & x_end));   		     //确定是否x > y 的signal码,1表示数学上 x > y.
+												 			     		    
+     //int bias = (((y - x) & mask_end) >> 31) & ((x & 1) ^ (y & 1));
+     int complement = ((x & 1) & (y & 1)); //x + y都是奇数时，x/2与y/2都会损失0.5，加起来就是1，要补。
+     bias = bias & ((x & 1) ^ (y & 1)); //要注意即便x > y,只有当 x和y奇偶性不想同时，才要考虑增加bias使得(x + y)/2作为小数向高处进。					   
+     int ans = ((x >> 1) + (y >> 1)) + bias + complement;
+     return ans;     
 }
 
 
