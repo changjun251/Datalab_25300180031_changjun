@@ -146,7 +146,8 @@ NOTES:
  *   Rating: 1
  */
 int signMask(void) {
-  return 1;
+	int val = (1 << 31);
+	return val;
 }
 
 // P2
@@ -158,7 +159,7 @@ int signMask(void) {
  *   Rating: 2
  */
 int bitXor(int x, int y) {
-	return 2;
+	return ~(~((~x) & y) & ~(x & (~y)));
 }
 
 // P3
@@ -170,7 +171,9 @@ int bitXor(int x, int y) {
  *   Rating: 3
  */
 int negativePart(int x){
-  return 3;
+    int mask = (x >> 31);
+    int ans = (~x + 1) & mask;
+    return ans;
 }
 
 
@@ -185,7 +188,16 @@ int negativePart(int x){
  *   Rating: 4
  */
 int copyByteWithin(int x, int src, int dst) {
-  return 4;
+   int mask_ori = 0xFF;
+   int m_src = src<<3;
+   int m_dst = dst<<3;
+   int mask_dst = mask_ori << m_dst;
+   
+   int changed_byte = (mask_ori << m_src) & x;
+   int changed_to_0 = changed_byte >> m_src;     //把要改变的byte移到最低位：第0位。
+   int changed_to_dst = (~mask_dst) | (changed_to_0 << m_dst);						 
+   int changed = (changed_to_dst) & (mask_dst | x);
+   return changed; 
 }
 
 // P5
@@ -198,7 +210,10 @@ int copyByteWithin(int x, int src, int dst) {
  *   Rating: 4
  */
 int logicalShift(int x, int n) {
-  return 5;
+    int ari_s = x >> n; //arithmetic shift result 
+    int mask = ~(((1 << 31) >> n) << 1) ; // 构造掩码。	
+    int result = mask & ari_s;
+    return result;    
 }
 
 // P6
@@ -210,7 +225,14 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int swapNibblePairs(int x) {
-  return 6;
+    int leftmask = (0x0F << 24) | (0x0F << 16) | (0x0F << 8) | 0x0F; 	
+    int rightmask = leftmask << 4;
+    int x_right = rightmask & x;
+    int x_right_shift = (~((1 << 31) >> 4)) & (x_right >> 4);
+    int x_left_shift = (leftmask & x) << 4;
+    int result = x_right_shift | x_left_shift;
+    return result;
+    		
 }
 
 // P7
@@ -223,7 +245,10 @@ int swapNibblePairs(int x) {
  *   Rating: 4
  */
 int secondLowestZeroBit(int x) {
-  return 7;
+    int firstmask = (x + 1) & (~x);
+    int x_complemented = x + firstmask; //补上最低位的0  
+    int secondmask = (x_complemented + 1) & (~x_complemented);
+    return secondmask;    
 }
 
 // P8
@@ -236,7 +261,43 @@ int secondLowestZeroBit(int x) {
  *   Rating: 5
  */
 int oddParity(int x) {
-  return 8;
+    int signal = 3;
+    
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+    x = x >> 2;
+    signal = signal ^ x;
+
+    int ans = (~(((signal & 2)>>1) ^ (signal & 1))) & 1;
+    return ans;
+    
 }
 
 // P9
@@ -249,7 +310,13 @@ int oddParity(int x) {
  *   Rating: 5
  */
 int rotateRightBits(int x, int n) {
-  return 9;
+    int mask1 = ((1<<31)>>(31^n));
+    int mask2 = ~mask1;
+    int rightpart = mask1 & x;
+    int lsmask = ~(((1<<31)>>n)<<1);
+    int rightshifted = lsmask & (rightpart >> n);
+    int leftpartshifted = (mask2 & x) << ((31^n) + 1);
+    return rightshifted | leftpartshifted;
 }
 
 // P10
@@ -264,7 +331,7 @@ int rotateRightBits(int x, int n) {
  *   Rating: 5
  */
 int roundEvenPow2(int x, int n) {
-  return 10;
+    
 }
 
 // P11
