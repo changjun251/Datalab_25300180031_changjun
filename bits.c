@@ -377,7 +377,17 @@ int midpointTowardFirst(int x, int y) {
  *   Rating: 7
  */
 int isBetweenEitherOrder(int x, int a, int b) {
-  return 12;
+    int x_sig = (x >> 31) & 1;
+    int a_sig = (a >> 31) & 1;
+    int b_sig = (b >> 31) & 1;
+    int a_minus_x = a + ~x + 1;
+    int b_minus_x = b + ~x + 1;
+    
+    int x_comp_a = (((a_minus_x >> 31) & 1) | ((a_sig) & (~x_sig))) & (~(x_sig & (~a_sig)));
+    int x_comp_b = (((b_minus_x >> 31) & 1) | ((b_sig) & (~x_sig))) & (~(x_sig & (~b_sig)));
+    int ans = (x_comp_a ^ x_comp_b) | (!(x ^ a)) | (!(x ^ b));
+    return ans;
+
 }
 
 // P13
@@ -390,7 +400,20 @@ int isBetweenEitherOrder(int x, int a, int b) {
  *   Rating: 7
  */
 int mul5Sat(int x) {
-  return 13;
+    int sum = (x << 2) + x; //但还不是最终答案。	
+    int x_sig = x >> 31;	
+    int sum_sig = sum >> 31;
+    int posi_1 = !((x>>29) & 3); 
+    posi_1 = posi_1 + ~0; 
+    int nega_0 = !((~(x>>29)) & 3);
+    nega_0 = nega_0 + ~0;   
+    int posi_flow = (~x_sig) & (posi_1 | sum_sig); //表示正溢出，32位均为1为正溢出。
+    int nega_flow = x_sig & (nega_0 | (~sum_sig)); //类似上一句。
+    int intmin = (1 << 31);
+    int intmax = ~intmin;
+    int temp = sum ^ ((intmax ^ sum) & posi_flow);
+    int ans = temp ^ ((intmin ^ temp) & nega_flow);
+    return ans;  
 }
 
 // P14
@@ -403,7 +426,24 @@ int mul5Sat(int x) {
  *   Rating: 7
  */
 int classifyAdd3(int x, int y, int z) {
-  return 14;
+    int x_sig = (x >> 31) & 1;
+    int y_sig = (y >> 31) & 1;
+    int z_sig = (z >> 31) & 1;    
+    int half_sum = x + y;
+    int half_sum_sig = (half_sum >> 31) & 1;   
+    int p_flow = ((~x_sig) & (~y_sig)) & half_sum_sig;
+    int n_flow = (x_sig & y_sig) & (~half_sum_sig);
+    
+    int sum = half_sum + z;
+    int sum_sig = (sum >> 31) & 1;
+    int p_flow_sum = (~half_sum_sig) & (~z_sig) & sum_sig;
+    int n_flow_sum = (half_sum_sig) & (z_sig) & (~sum_sig);
+    
+    int half_flow = p_flow | n_flow; 
+    int pos_part = ((~half_flow) & p_flow_sum) | ((p_flow) & (~n_flow_sum));
+    int neg_part = ((~half_flow) & n_flow_sum) | ((n_flow) & (~p_flow_sum));
+    int ans = pos_part + ~neg_part + 1;
+    return ans;
 }
 
 // P15
@@ -420,7 +460,7 @@ int classifyAdd3(int x, int y, int z) {
  *   Rating: 7
  */
 unsigned floatScaleThreeHalves(unsigned uf) {
-  return 15;
+    
 }
 
 // P16
@@ -464,10 +504,20 @@ unsigned float_i2f(int x) {
  *   Rating: 10
  */
 int bitCount(int x) {
-  return 18;
+    int mask_4bit = 0x33 | (0x33 << 8) | (0x33 << 16) | (0x33 << 24);
+    int mask_2bit = (((mask_4bit >> 1) & mask_4bit) << 1) + mask_4bit;
+    int temp = (x & mask_2bit) + ((x >> 1) & mask_2bit);
+    temp = (temp & mask_4bit) + ((temp >> 2) & mask_4bit);
+    int mask_8bit = 0x0F | (0x0F << 8) | (0x0F << 16) | (0x0F << 24);
+    temp = (temp & mask_8bit) + ((temp >> 4) & mask_8bit);
+    int mask_16bit = 0xFF | (0xFF << 16);
+    temp = (temp & mask_16bit) + ((temp >> 8) & mask_16bit);
+    int mask_32bit = 0xFF | (0xFF << 8);
+    int ans = (temp & mask_32bit) + (temp >> 16);
+    return ans;
 }
 
-// P19
+// P19:
 /*
  * bitReverse - Reverse bits in an 32-bit integer
  *   Examples: bitReverse(0x80000004) = 0x20000001
@@ -476,7 +526,20 @@ int bitCount(int x) {
  *   Max ops: 34
  *   Rating: 10
  */
-int bitReverse(int x)
-{
-  return 19;
+int bitReverse(int x){
+    int m5 = 0xFF | (0xFF << 8);
+    int m4 = m5 ^ (m5 << 8);
+    int m3 = m4 ^ (m4 << 4);
+    int m2 = m3 ^ (m3 << 2);
+    int m1 = m2 ^ (m2 << 1);
+
+    //以下为从小到大分块转换顺序过程。
+    int temp = ((x & m1) << 1) + ((x >> 1) & m1);
+    temp = ((temp & m2) << 2) + ((temp >> 2) & m2);
+    temp = ((temp & m3) << 4) + ((temp >> 4) & m3);
+    temp = ((temp & m4) << 8) + ((temp >> 8) & m4);
+    temp = (temp << 16) + ((temp >> 16) & m5);
+    int ans = temp;
+    return ans;
+        	    
 }
