@@ -628,7 +628,7 @@ unsigned float_i2f(int x) {
        abs_x = abs_x >> (ct - 24);
        abs_x += incr;
 
-       if ((1 << 23) & abs_x) {
+       if ((1 << 24) & abs_x) {
            expr++;
 	   abs_x = 0;
        }		   
