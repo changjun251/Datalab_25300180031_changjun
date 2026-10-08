@@ -460,7 +460,57 @@ int classifyAdd3(int x, int y, int z) {
  *   Rating: 7
  */
 unsigned floatScaleThreeHalves(unsigned uf) {
+    int m1 = 1 << 31;	 //mask 1
+    unsigned sign = uf & m1;
+    unsigned temp = (m1 >> 8);
+    unsigned m2 = temp - m1;
+    unsigned unit = (1 << 23); //exp位增加的单位大小。
+    unsigned exp = uf & m2;
+    unsigned m3 = ~temp;
+    unsigned frac = m3 & uf;
+    if ((exp >> 23) == 0xFF) {
+        return uf;                                                                     
+    }//NaN + Inf的返回
+
+    unsigned sum = (frac << 1) + frac;
+    unsigned ans;
+	
+    //要先处理非规格化值
+    if (!exp) {
+        unsigned sig = sum & (sum >> 1) & 1;
+        unsigned new_frac = (sum >> 1) + sig;
+        ans = new_frac | sign;
+	return ans;
+    }
     
+    
+    sum += (1 << 23);  //规格化值对于小数位加起来的和，要增加0.5（来自0.5 + 0.5 * frac，非规格化无常数项）。
+    if ((sum >> 24) & 1) {
+        sum -= (1 << 24);  //相当于 + 2 ^ 25 - 2 ^ 26.
+	
+	exp += unit;
+        if ((exp >> 23) == 0xFF) {
+	     return temp & (exp | sign);
+	}
+	
+	unsigned flow_bit = 3;
+        flow_bit = flow_bit & sum;
+	unsigned last_bit = 4 & sum;
+	sum = (sum >> 2);
+	
+	if (flow_bit > 2 || (flow_bit == 2 && last_bit)) {
+            sum += 1;           	    
+	}	
+	ans = sum | exp | sign;
+	return ans;
+    }
+
+    else {
+	unsigned sig = sum & (sum >> 1) & 1;
+        unsigned new_frac = (sum >> 1) + sig;
+	ans = new_frac | exp | sign;
+	return ans;
+    }	   
 }
 
 // P16
@@ -476,7 +526,55 @@ unsigned floatScaleThreeHalves(unsigned uf) {
  *   Rating: 10
  */
 unsigned floatRoundEven(unsigned uf) {
-  return 16;
+    int m1 = 1 << 31;    //mask 1
+    unsigned sign = uf & m1;
+    unsigned temp = (m1 >> 8);
+    unsigned m2 = temp - m1;
+    unsigned unit = (1 << 23); //exp位增加的单位大小。
+    unsigned exp = (uf & m2);
+    unsigned m3 = ~temp;
+    unsigned frac = m3 & uf;
+    int e = (exp >> 23);
+    e = e - 127;
+    unsigned ans;
+    if (e >= 23 || ((exp >> 23) == 0xFF)) {
+        return uf;
+    }
+    
+    if (e <= -2) {
+        return sign;
+    }
+    
+    if (e == -1) {
+        if (!frac) {
+	    return sign;
+	}
+	else {
+	    exp += unit;
+	    ans = exp | sign;
+	    return ans;
+	}
+    }   
+    frac = frac + (1 << 23);
+    unsigned new_temp = ~(m1 >> (e + 8)); //注意这里要利用补码，所以用unsigned的temp >> e不好，应该使用int
+    if (((frac & new_temp) == (unit >> (e + 1)) && (frac & (unit >> e))) || (frac & new_temp) > (unit >> (e + 1))) {
+        frac += (unit >> e);
+    }		     
+    frac = frac & ~new_temp;
+    //注意：例如frac = 11111....11111 全1的情况，化整数后需要对其四舍五入。
+    //这体现在frac舍入后，回到1-23位时，如果最高位又出现了1，那么就说明表示(1 + frac)表示数>=2。
+    //实际上只可能等于2.
+    
+    if (frac & (1 << 24)) {
+        frac = 0;
+        exp += unit;
+	ans = sign | exp | frac;
+        return ans;	
+    } 
+    
+    frac -= (1 << 23);
+    ans = sign | exp | frac;
+    return ans; 
 }
 
 // P17
@@ -490,7 +588,59 @@ unsigned floatRoundEven(unsigned uf) {
  *   Rating: 10
  */
 unsigned float_i2f(int x) {
-  return 17;
+   int sign = (1 << 31) & x;
+   int m1 = sign >> 31;
+   unsigned un_sign = sign;
+   unsigned abs_x;
+   if (x < 0){
+       abs_x = -x;
+   }
+   else {
+       abs_x = x;
+   }
+   
+   if (x == 0) {
+       return 0; //0不可能是-0，int没有-0，所以就是+0，对应float位级表示最高也是0，直接返回0即可。
+   }
+   int expr;
+   unsigned ans;
+   if (x == (1 << 31)) {
+       expr = (158 << 23);
+       ans = un_sign | expr;
+       return ans; 
+   }
+
+   int ct = 0; //count
+   unsigned temp = abs_x;		    
+   while (temp > 0) {
+	ct++;
+        temp = temp >> 1;	
+   }   
+   int m2 = ((1 << 31) >> 8);//高位是1.
+   expr = ct;	 //|x| = (2^(ct - 1)) * 规格化后值。
+		
+      
+   if (ct >= 25) {//这一部分要舍入
+       unsigned m3 = (1 << (ct - 25));
+       unsigned m4 = (1 << 31) >> (55 - ct);
+       unsigned omitted = abs_x & (~m4);
+       unsigned incr = ((m3 == omitted) && ((m3 << 1) & abs_x)) || (omitted > m3);    //increment
+       abs_x = abs_x >> (ct - 24);
+       abs_x += incr;
+
+       if ((1 << 23) & abs_x) {
+           expr++;
+	   abs_x = 0;
+       }		   
+   } 
+   else {
+       abs_x = abs_x << (-ct + 24);
+   }
+   abs_x = abs_x & (~m2);
+   expr = expr + 126;
+   expr = expr << 23;
+   ans = un_sign | expr | abs_x;  
+   return ans; 
 }
 
 
