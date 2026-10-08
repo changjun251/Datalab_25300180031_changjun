@@ -589,7 +589,6 @@ unsigned floatRoundEven(unsigned uf) {
  */
 unsigned float_i2f(int x) {
    int sign = (1 << 31) & x;
-   int m1 = sign >> 31;
    unsigned un_sign = sign;
    unsigned abs_x;
    if (x < 0){
@@ -616,13 +615,14 @@ unsigned float_i2f(int x) {
 	ct++;
         temp = temp >> 1;	
    }   
-   int m2 = ((1 << 31) >> 8);//高位是1.
+   int m1 = 1 << 31; 
+   int m2 = (m1 >> 8);//高位是1.
    expr = ct;	 //|x| = (2^(ct - 1)) * 规格化后值。
 		
       
    if (ct >= 25) {//这一部分要舍入
        unsigned m3 = (1 << (ct - 25));
-       unsigned m4 = (1 << 31) >> (55 - ct);
+       unsigned m4 = m1 >> (55 - ct);
        unsigned omitted = abs_x & (~m4);
        unsigned incr = ((m3 == omitted) && ((m3 << 1) & abs_x)) || (omitted > m3);    //increment
        abs_x = abs_x >> (ct - 24);
